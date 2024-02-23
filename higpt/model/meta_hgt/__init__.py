@@ -1,0 +1,1 @@
+from higpt.model.meta_hgt.meta_hgtconv_bert_all import MetaHGTConvCfg, MetaHGTConv
