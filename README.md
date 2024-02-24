@@ -26,7 +26,7 @@ This repository hosts the code, data and model weight of **HiGPT**.
 | 🤗 Huggingface Address                          | 🎯 Description                                                |
 | ---------------------------------------------- | ------------------------------------------------------------ |
 | https://huggingface.co/Jiabin99/In-Context-HGT | The trained in-context heterogeneous graph tokenizer using our lightweight text-graph contrastive alignment. |
-|                                                |                                                              |
+| https://huggingface.co/Jiabin99/HiGPT          | It's the checkpoint of our HiGPT based on Vicuna-7B-v1.5 tuned on 60 shots IMDB graph instruction data. |
 
 
 - [x] [2023.10.26]🔥🔥Release our utilized Instruction data.
@@ -52,7 +52,11 @@ This repository hosts the code, data and model weight of **HiGPT**.
 
 we present the **HiGPT** framework that aligns LLMs with heterogeneous graph structural knowledge with a heterogeneous graph instruction tuning paradigm.
 
+![image-20240224193025443](/Users/tangjiabin/Documents/HiGPT_open/HiGPT/images/overview.png)
 
+* **In-Context Heterogeneous Graph Tokenizer.** To achieve adaptability in a wide range of heterogeneous graph sce- narios with varying node and edge types, we introduce the in- context heterogeneous graph tokenizer. This tokenizer captures the diverse semantic relationships found in different heterogeneous graphs, providing a unified approach. To optimize performance and integrate the tokenizer seamlessly into the HiGPT framework, we employ pre-training with a lightweight text-graph contrastive alignment paradigm. For pretraining details, please refer to [[./HG_grounding]](./HG_grounding/README.md). 
+* **Heterogeneous Graph Instruction-Tuning.** We intro- duce a novel heterogeneous graph instruction-tuning framework that integrates inter-type and intra-type token matching tasks to fine-tune large language models (LLMs). Our framework specifically targets the enhancement of LLMs’ understanding of both hetero- geneous relation awareness and homogeneous relation awareness. By utilizing these tasks, our aim is to bolster the LLMs’ capabilities in the following areas: (i) distinguishing between different types of graph tokens, (ii) comprehending intricate relationships within heterogeneous graphs, (iii) preserving the distinctive attributes of entities within homogeneous graphs, and (iv) effectively harnessing diverse graph instructions during the training process. Please refer to <a href='#Usage'>Getting Started </a> to explore more. 
+* **Mixture-of-Thought Augmentation.** Our approach introduces a novel mechanism for augmenting graph instructions, emphasizing the use of Mixture-of-Thought (MoT) combined with various prompting techniques. This integration enables us to gen- erate a diverse and comprehensive set of informative task-specific instructions. By seamlessly incorporating these augmented graphinstructions into our framework, we anticipate that our model en- hancement will effectively address the challenge of data sparsity. For prompting examples, please refer to [[./mot_prompting]](./mot_prompting/README.md). 
 
 
 For more technical details, kindly refer to the [paper](#) and the project [website](https://HiGPT-HKU.github.io/) of our Graph. 
@@ -67,253 +71,26 @@ For more technical details, kindly refer to the [paper](#) and the project [webs
 <span id='all_catelogue'/>
 
 ### Table of Contents:
-* <a href='#Code Structure'>1. Code Structure</a>
-* <a href='#Environment Preparation'>2. Environment Preparation </a>
-* <a href='#Data Preparation'>3. Data Preparation </a>
-* <a href='#Training HiGPT'>4. Training HiGPT </a>
-  * <a href='#Offline Heterogeneous Graph Tokenizing'>4.0. Offline Heterogeneous Graph Tokenizing</a>
-  * <a href='#Prepare Pre-trained Checkpoint'>4.1. Prepare Pre-trained Checkpoint</a>
-  * <a href='#Self-Supervised Instruction Tuning'>4.2. Self-Supervised Instruction Tuning</a>
-  * <a href='#Extract the Trained Projector'>4.3. Extract the Trained Projector</a>
-  * <a href='#Task-Specific Instruction Tuning'>4.4. Task-Specific Instruction Tuning</a>
-* <a href='#Evaluating HiGPT'>5. Evaluating HiGPT</a>
-  * <a href='#Preparing Checkpoints'>5.1. Preparing Checkpoints</a>
-  * <a href='#Running Evaluation'>5.2. Running Evaluation</a>
+* <a href='#Environment Preparation'>1. Environment Preparation </a>
+* <a href='#Data Preparation'>2. Data Preparation </a>
+* <a href='#Training HiGPT'>3. Training HiGPT </a>
+  * <a href='#Offline Heterogeneous Graph Tokenizing'>3.0. Offline Heterogeneous Graph Tokenizing</a>
+  * <a href='#Prepare Pre-trained Checkpoint'>3.1. Prepare Pre-trained Checkpoint</a>
+  * <a href='#Self-Supervised Instruction Tuning'>3.2. Instruction Tuning with Heterogeneous Graph Corpus</a>
+  * <a href='#Extract the Trained Projector'>3.3. Extract the Trained Projector</a>
+  * <a href='#Task-Specific Instruction Tuning'>3.4. Heterogeneity-aware Fine-tuning</a>
+* <a href='#Evaluating HiGPT'>4. Evaluating HiGPT</a>
+  * <a href='#Preparing Checkpoints'>4.1. Preparing Checkpoints</a>
+  * <a href='#Running Evaluation'>4.2. Running Evaluation</a>
 
 ****
 
 
 
-<span id='Code Structure'/>
-
-### 1. Code Structure <a href='#all_catelogue'>[Back to Top]</a>
-
-```
-.
-├── LICENSE
-├── README.md
-├── base_model.py
-├── dist_utils.py
-├── docs
-│   ├── arena.md
-│   ├── commands
-│   │   ├── data_cleaning.md
-│   │   ├── leaderboard.md
-│   │   ├── local_cluster.md
-│   │   ├── pypi.md
-│   │   └── webserver.md
-│   ├── langchain_integration.md
-│   ├── openai_api.md
-│   ├── server_arch.md
-│   ├── test_process.md
-│   ├── vicuna_weights_version.md
-│   └── weights_version.md
-├── examples
-│   └── langchain
-│       ├── README.md
-│       ├── chatgpt_clone.ipynb
-│       ├── qa.ipynb
-│       └── twitter_algo_analysis.ipynb
-├── hi_datasets
-│   ├── get_stage1_data.sh
-│   └── get_stage2_data.sh
-├── higpt
-│   ├── __init__.py
-│   ├── __pycache__
-│   │   ├── __init__.cpython-38.pyc
-│   │   └── conversation.cpython-38.pyc
-│   ├── constants.py
-│   ├── conversation.py
-│   ├── eval
-│   │   ├── requirements.txt
-│   │   ├── run_higpt.py
-│   │   ├── run_higpt_incontext.py
-│   │   └── webpage
-│   │       ├── figures
-│   │       │   ├── alpaca.png
-│   │       │   ├── bard.jpg
-│   │       │   ├── chatgpt.svg
-│   │       │   ├── llama.jpg
-│   │       │   ├── swords_FILL0_wght300_GRAD0_opsz48.svg
-│   │       │   └── vicuna.jpeg
-│   │       ├── index.html
-│   │       ├── script.js
-│   │       └── styles.css
-│   ├── model
-│   │   ├── GraphLlama.py
-│   │   ├── GraphLlama_pl.py
-│   │   ├── HeteroLlama.py
-│   │   ├── HeteroLlama_pl.py
-│   │   ├── MetaHGTConv_pl.py
-│   │   ├── __init__.py
-│   │   ├── __pycache__
-│   │   │   ├── GraphLlama.cpython-38.pyc
-│   │   │   ├── HeteroLlama.cpython-38.pyc
-│   │   │   ├── __init__.cpython-38.pyc
-│   │   │   └── model_adapter.cpython-38.pyc
-│   │   ├── apply_delta.py
-│   │   ├── apply_lora.py
-│   │   ├── builder.py
-│   │   ├── chatglm_model.py
-│   │   ├── compression.py
-│   │   ├── convert_fp16.py
-│   │   ├── graph_layers
-│   │   │   ├── __init__.py
-│   │   │   ├── __pycache__
-│   │   │   │   ├── __init__.cpython-38.pyc
-│   │   │   │   ├── clip_graph.cpython-38.pyc
-│   │   │   │   ├── graph_transformer.cpython-38.pyc
-│   │   │   │   ├── mpnn.cpython-38.pyc
-│   │   │   │   └── simple_tokenizer.cpython-38.pyc
-│   │   │   ├── bpe_simple_vocab_16e6.txt.gz
-│   │   │   ├── clip_graph.py
-│   │   │   ├── graph_transformer.py
-│   │   │   ├── mpnn.py
-│   │   │   └── simple_tokenizer.py
-│   │   ├── heteclip_models
-│   │   │   ├── __init__.py
-│   │   │   ├── __pycache__
-│   │   │   │   ├── __init__.cpython-38.pyc
-│   │   │   │   ├── clip_outputs.cpython-38.pyc
-│   │   │   │   ├── model.cpython-38.pyc
-│   │   │   │   ├── pretrained.cpython-38.pyc
-│   │   │   │   ├── tokenizer.cpython-38.pyc
-│   │   │   │   ├── transform.cpython-38.pyc
-│   │   │   │   └── utils.cpython-38.pyc
-│   │   │   ├── bpe_simple_vocab_16e6.txt.gz
-│   │   │   ├── clip_outputs.py
-│   │   │   ├── loss.py
-│   │   │   ├── model.py
-│   │   │   ├── pics
-│   │   │   │   └── CLIP.png
-│   │   │   ├── pretrained.py
-│   │   │   ├── timm_model.py
-│   │   │   ├── tokenizer.py
-│   │   │   ├── transform.py
-│   │   │   └── utils.py
-│   │   ├── make_delta.py
-│   │   ├── meta_hgt
-│   │   │   ├── __init__.py
-│   │   │   ├── __pycache__
-│   │   │   │   ├── __init__.cpython-38.pyc
-│   │   │   │   ├── hgt_constants.cpython-38.pyc
-│   │   │   │   ├── meta_hgtconv.cpython-38.pyc
-│   │   │   │   ├── meta_hgtconv_bert_all.cpython-38.pyc
-│   │   │   │   ├── meta_linear.cpython-38.pyc
-│   │   │   │   └── tokenizer.cpython-38.pyc
-│   │   │   ├── bpe_simple_vocab_16e6.txt.gz
-│   │   │   ├── hgt_constants.py
-│   │   │   ├── meta_dict
-│   │   │   │   ├── acm
-│   │   │   │   │   ├── edge_type.pt
-│   │   │   │   │   └── node_type.pt
-│   │   │   │   ├── dblp
-│   │   │   │   │   ├── edge_type.pt
-│   │   │   │   │   └── node_type.pt
-│   │   │   │   ├── imdb
-│   │   │   │   │   ├── edge_type.pt
-│   │   │   │   │   └── node_type.pt
-│   │   │   │   └── to_tensor.py
-│   │   │   ├── meta_hgtconv.py
-│   │   │   ├── meta_hgtconv_bert_all.py
-│   │   │   ├── meta_linear.py
-│   │   │   ├── ori_hgt.py
-│   │   │   └── tokenizer.py
-│   │   ├── model_adapter.py
-│   │   ├── model_registry.py
-│   │   ├── monkey_patch_non_inplace.py
-│   │   ├── rwkv_model.py
-│   │   └── utils.py
-│   ├── protocol
-│   │   └── openai_api_protocol.py
-│   ├── serve
-│   │   ├── __init__.py
-│   │   ├── api_provider.py
-│   │   ├── bard_worker.py
-│   │   ├── cacheflow_worker.py
-│   │   ├── cli.py
-│   │   ├── controller.py
-│   │   ├── gateway
-│   │   │   ├── README.md
-│   │   │   └── nginx.conf
-│   │   ├── gradio_block_arena_anony.py
-│   │   ├── gradio_block_arena_named.py
-│   │   ├── gradio_css.py
-│   │   ├── gradio_patch.py
-│   │   ├── gradio_web_server.py
-│   │   ├── gradio_web_server_multi.py
-│   │   ├── huggingface_api.py
-│   │   ├── inference.py
-│   │   ├── model_worker.py
-│   │   ├── monitor
-│   │   │   ├── basic_stats.py
-│   │   │   ├── clean_battle_data.py
-│   │   │   ├── elo_analysis.py
-│   │   │   ├── hf_space_leaderboard_app.py
-│   │   │   └── monitor.py
-│   │   ├── openai_api_server.py
-│   │   ├── register_worker.py
-│   │   ├── test_message.py
-│   │   └── test_throughput.py
-│   ├── train
-│   │   ├── __pycache__
-│   │   │   └── graphchat_trainer.cpython-38.pyc
-│   │   ├── graphchat_trainer.py
-│   │   ├── llama_flash_attn_monkey_patch.py
-│   │   ├── train.py
-│   │   ├── train_flant5.py
-│   │   ├── train_g.py
-│   │   ├── train_graph.py
-│   │   ├── train_graph_back.py
-│   │   ├── train_hete.py
-│   │   ├── train_hete_nopl.py
-│   │   ├── train_hete_nopl_back_2_5.py
-│   │   ├── train_hete_nopl_wo_IA.py
-│   │   ├── train_hete_nopl_wo_graph.py
-│   │   ├── train_hete_old.py
-│   │   ├── train_light.py
-│   │   ├── train_llava.py
-│   │   ├── train_lora.py
-│   │   └── train_mem.py
-│   └── utils.py
-├── playground
-│   ├── inspect_conv.py
-│   ├── test_embedding
-│   │   ├── README.md
-│   │   ├── test_classification.py
-│   │   ├── test_semantic_search.py
-│   │   └── test_sentence_similarity.py
-│   └── test_openai_api
-│       ├── anthropic_api.py
-│       └── openai_api.py
-├── run_offline_hgt_tokenizer.py
-├── run_offline_hgt_tokenizer_single.py
-├── scripts
-│   ├── eval_script
-│   │   ├── cal_acc_imdb_metric.py
-│   │   ├── hetegpt_info_imdb_cot_incontext.sh
-│   │   └── higpt_info_imdb_cot.sh
-│   ├── extract_graph_projector.py
-│   ├── serving
-│   │   ├── controller.yaml
-│   │   └── model_worker.yaml
-│   └── tune_script
-│       ├── extract_projector.sh
-│       ├── higpt_stage_1.sh
-│       ├── higpt_stage_2.sh
-│       ├── run_graph_tokenizer.sh
-│       └── run_graph_tokenizer_single.sh
-├── tests
-│   ├── test_openai_curl.sh
-│   ├── test_openai_langchain.py
-│   └── test_openai_sdk.py
-└── utils.py
-```
-
 <span id='Environment Preparation'/>
 
 
-### 2. Environment Preparation  <a href='#all_catelogue'>[Back to Top]</a>
+### 1. Environment Preparation  <a href='#all_catelogue'>[Back to Top]</a>
 Please first clone the repo and install the required environment, which can be done by running the following commands:
 ```shell
 conda create -n higpt python=3.8
@@ -337,7 +114,7 @@ pip install -r requirements.txt
 <span id='Data Preparation'/>
 
 
-### 3. Data Preparation  <a href='#all_catelogue'>[Back to Top]</a>
+### 2. Data Preparation  <a href='#all_catelogue'>[Back to Top]</a>
 
 The tuning data of our HiGPT consists of two parts, i.e., heterogeneous graph corpus (stage 1) and heterogeneity-aware graph instruction (stage 2). You can `cd hi_datasets` and run `sh get_stage1_data.sh` to download the data in **stage 1**:
 
@@ -387,13 +164,13 @@ rm -f processed_acm.tar.gz
 
 <span id='Training HiGPT'/>
 
-### 4. Training HiGPT <a href='#all_catelogue'>[Back to Top]</a>
+### 3. Training HiGPT <a href='#all_catelogue'>[Back to Top]</a>
 
 HiGPT tuning paradigm consists of two stages: (1) instruction tuning with heterogeneous graph corpus; (2) heterogeneity-aware fine-tuning.
 
 <span id='Offline Heterogeneous Graph Tokenizing'/>
 
-#### 4.0. Offline Heterogeneous Graph Tokenizing  <a href='#all_catelogue'>[Back to Top]</a>
+#### 3.0. Offline Heterogeneous Graph Tokenizing  <a href='#all_catelogue'>[Back to Top]</a>
 
 Since the graph tokenizer does not update parameters during the two training processes, we use the Offline Heterogeneous Graph Tokenizing method to preprocess the instruction data in order to accelerate the speed of model training. The data downloaded in <a href='#Data Preparation'>Data Preparation </a> has been processed with a pre-trained graph tokenizer. If you need to process with your own graph tokenizer, you can refer to the following commands:
 
@@ -446,18 +223,18 @@ done
 
 <span id='Prepare Pre-trained Checkpoint'/>
 
-#### 4.1. Preparing Pre-trained Checkpoint  <a href='#all_catelogue'>[Back to Top]</a>
+#### 3.1. Preparing Pre-trained Checkpoint  <a href='#all_catelogue'>[Back to Top]</a>
 HiGPT is trained based on following excellent existing models.
 Please follow the instructions to prepare the checkpoints.
 
 - `Vicuna`:
   Prepare our base model Vicuna, which is an instruction-tuned chatbot and base model in our implementation. Please download its weights [here](https://github.com/lm-sys/FastChat#model-weights). We generally utilize v1.1 and v1.5 model with 7B parameters.
 - `Pretrained Graph Tokenizer`:
-  is used to encode heterogeneous graph structures. We employ text-graph grounding approach to obtain the pre-trained heterogeneous graph transformer model, which you could download by [heterogeneous graph transformer](https://huggingface.co/Jiabin99/In-Context-HGT) and put it at [[./HiGPT]](./HiGPT). We also provide source codes for text-graph grounding at [[./HG_grounding]](./HG_grounding) for your reference.
+  is used to encode heterogeneous graph structures. We employ text-graph grounding approach to obtain the pre-trained heterogeneous graph transformer model, which you could download by [heterogeneous graph transformer](https://huggingface.co/Jiabin99/In-Context-HGT) and put it at [[./HiGPT]](./HiGPT). We also provide source codes for text-graph grounding at [[./HG_grounding]](./HG_grounding/README.md) for your reference.
 
 <span id='Self-Supervised Instruction Tuning'/>
 
-#### 4.2. Instruction Tuning with Heterogeneous Graph Corpus  <a href='#all_catelogue'>[Back to Top]</a>
+#### 3.2. Instruction Tuning with Heterogeneous Graph Corpus  <a href='#all_catelogue'>[Back to Top]</a>
 
 You could start the first stage tuning by filling blanks at [higpt_stage_1.sh](scripts/tune_script/higpt_stage_1.sh). There is an example as below: 
 
@@ -509,7 +286,7 @@ python3.8 -m torch.distributed.run --nnodes=1 --nproc_per_node=4 --master_port=2
 
 <span id='Extract the Trained Projector'/>
 
-#### 4.3. Extract the Trained Projector  <a href='#all_catelogue'>[Back to Top]</a>
+#### 3.3. Extract the Trained Projector  <a href='#all_catelogue'>[Back to Top]</a>
 
 We could extract the trained projector in the stage 1 by filling blanks at [extract_projector.sh](scripts/tune_script/extract_projector.sh). There is an example as below: 
 
@@ -527,7 +304,7 @@ python3.8 ./scripts/extract_graph_projector.py \
 
 <span id='Task-Specific Instruction Tuning'/>
 
-#### 4.4. Task-Specific Instruction Tuning  <a href='#all_catelogue'>[Back to Top]</a>
+#### 3.4. Heterogeneity-aware Fine-tuning  <a href='#all_catelogue'>[Back to Top]</a>
 
 You could start the second stage tuning based on different number of shots (e.g., 1, 3, 5, 10, 20, 40, 60) by filling blanks at [higpt_stage_2.sh](scripts/tune_script/higpt_stage_2.sh). There is an example as below: 
 
