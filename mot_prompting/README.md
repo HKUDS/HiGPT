@@ -2,7 +2,7 @@
 
 We provide prompting examples of Mixture-of-Thought graph instruction augmentation for there different datasets, i.e., IMDB, DBLP and ACM. 
 
-![image-20240224190942252](/Users/tangjiabin/Documents/HiGPT_open/HiGPT/images/mot_prompt.png)
+![image-20240224190942252](../images/mot_prompt.png)
 
 For example, we can run the following instructions to obtain `CoT without Format Constraint` augmentation on IMDB datasets: 
 
