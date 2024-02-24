@@ -29,9 +29,9 @@ This repository hosts the code, data and model weight of **HiGPT**.
 | https://huggingface.co/Jiabin99/HiGPT          | It's the checkpoint of our HiGPT based on Vicuna-7B-v1.5 tuned on 60 shots IMDB graph instruction data. |
 
 
-- [x] [2023.10.26]🔥🔥Release our utilized Instruction data.
-- [x] [2023.10.26]🔥🔥Release checkpoints of our HiGPT and pre-trained graph encoder.
-- [x] [2023.10.15] 🚀🚀 Release the code of HiGPT.
+- [x] [2024.02.24]🔥🔥Release our utilized Instruction data.
+- [x] [2024.02.24]🔥🔥Release checkpoints of our HiGPT and pre-trained graph encoder.
+- [x] [2024.02.24] 🚀🚀 Release the code of HiGPT.
 
 
 ## 👉 TODO 
