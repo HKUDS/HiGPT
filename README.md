@@ -429,7 +429,7 @@ For any questions or feedback, feel free to contact [Jiabin Tang](mailto:jiabint
 
 If you find HiGPT useful in your research or applications, please kindly cite:
 ```tex
-@articles{tang2023graphgpt,
+@articles{tang2024higpt,
 title={HiGPT: Heterogeneous Graph Language Model}, 
 author={Jiabin Tang and Yuhao Yang and Wei Wei and Lei Shi and Long Xia and Dawei Yin and Chao Huang},
 year={2024},
