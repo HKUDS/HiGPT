@@ -23,10 +23,10 @@ This repository hosts the code, data and model weight of **HiGPT**.
 
 🎯🎯📢📢 We have made significant updates to the **models** used in our HiGPT on 🤗 **Huggingface**. We highly recommend referring to the table below for further details: 
 
-| 🤗 Huggingface Address                   | 🎯 Description |
-| --------------------------------------- | ------------- |
-| https://huggingface.co/Jiabin99/MetaHGT |               |
-|                                         |               |
+| 🤗 Huggingface Address                          | 🎯 Description                                                |
+| ---------------------------------------------- | ------------------------------------------------------------ |
+| https://huggingface.co/Jiabin99/In-Context-HGT | The trained in-context heterogeneous graph tokenizer using our lightweight text-graph contrastive alignment. |
+|                                                |                                                              |
 
 
 - [x] [2023.10.26]🔥🔥Release our utilized Instruction data.
@@ -69,14 +69,15 @@ For more technical details, kindly refer to the [paper](#) and the project [webs
 ### Table of Contents:
 * <a href='#Code Structure'>1. Code Structure</a>
 * <a href='#Environment Preparation'>2. Environment Preparation </a>
-* <a href='#Training HiGPT'>3. Data Preparation </a>
+* <a href='#Data Preparation'>3. Data Preparation </a>
 * <a href='#Training HiGPT'>4. Training HiGPT </a>
+  * <a href='#Offline Heterogeneous Graph Tokenizing'>4.0. Offline Heterogeneous Graph Tokenizing</a>
   * <a href='#Prepare Pre-trained Checkpoint'>4.1. Prepare Pre-trained Checkpoint</a>
   * <a href='#Self-Supervised Instruction Tuning'>4.2. Self-Supervised Instruction Tuning</a>
   * <a href='#Extract the Trained Projector'>4.3. Extract the Trained Projector</a>
   * <a href='#Task-Specific Instruction Tuning'>4.4. Task-Specific Instruction Tuning</a>
 * <a href='#Evaluating HiGPT'>5. Evaluating HiGPT</a>
-  * <a href='#Preparing Checkpoints and Data'>5.1. Preparing Checkpoints and Data</a>
+  * <a href='#Preparing Checkpoints'>5.1. Preparing Checkpoints</a>
   * <a href='#Running Evaluation'>5.2. Running Evaluation</a>
 
 ****
@@ -309,14 +310,13 @@ For more technical details, kindly refer to the [paper](#) and the project [webs
 └── utils.py
 ```
 
-
 <span id='Environment Preparation'/>
 
 
 ### 2. Environment Preparation  <a href='#all_catelogue'>[Back to Top]</a>
 Please first clone the repo and install the required environment, which can be done by running the following commands:
 ```shell
-conda create -n graphgpt python=3.8
+conda create -n higpt python=3.8
 
 conda activate higpt
 
@@ -334,11 +334,115 @@ cd HiGPT
 pip install -r requirements.txt
 ```
 
+<span id='Data Preparation'/>
+
+
+### 3. Data Preparation  <a href='#all_catelogue'>[Back to Top]</a>
+
+The tuning data of our HiGPT consists of two parts, i.e., heterogeneous graph corpus (stage 1) and heterogeneity-aware graph instruction (stage 2). You can `cd hi_datasets` and run `sh get_stage1_data.sh` to download the data in **stage 1**:
+
+```shell
+cd /path/to/HiGPT/hi_datasets
+
+wget https://archive.org/download/higpt_stage1/matching_instruction.tar.gz
+
+tar -xzvf matching_instruction.tar.gz
+
+rm -f matching_instruction.tar.gz
+```
+
+Also, you can run `sh get_stage1_data.sh` to download the data in **stage 2**:
+
+```shell
+cd /path/to/HiGPT/hi_datasets
+
+mkdir stage2_data
+cd stage2_data
+
+wget https://archive.org/download/higpt_stage2/instruct_ds_dblp.tar.gz
+wget https://archive.org/download/higpt_stage2/processed_dblp.tar.gz
+wget https://archive.org/download/higpt_stage2/instruct_ds_imdb.tar.gz
+wget https://archive.org/download/higpt_stage2/processed_imdb.tar.gz
+wget https://archive.org/download/higpt_stage2/instruct_ds_acm.tar.gz
+wget https://archive.org/download/higpt_stage2/processed_acm.tar.gz
+
+mkdir DBLP
+mkdir IMDB
+mkdir acm
+
+tar -xzvf instruct_ds_dblp.tar.gz -C DBLP
+tar -xzvf processed_dblp.tar.gz -C DBLP
+tar -xzvf instruct_ds_imdb.tar.gz -C IMDB
+tar -xzvf processed_imdb.tar.gz -C IMDB
+tar -xzvf instruct_ds_acm.tar.gz -C acm
+tar -xzvf processed_acm.tar.gz -C acm
+
+rm -f instruct_ds_dblp.tar.gz
+rm -f processed_dblp.tar.gz
+rm -f instruct_ds_imdb.tar.gz
+rm -f processed_imdb.tar.gz
+rm -f instruct_ds_acm.tar.gz
+rm -f processed_acm.tar.gz
+```
+
 <span id='Training HiGPT'/>
 
 ### 4. Training HiGPT <a href='#all_catelogue'>[Back to Top]</a>
 
-HiGPT tuning paradigm consists of two stages: (1) self-supervised instruction tuning; (2) task-specific instruction tuning.
+HiGPT tuning paradigm consists of two stages: (1) instruction tuning with heterogeneous graph corpus; (2) heterogeneity-aware fine-tuning.
+
+<span id='Offline Heterogeneous Graph Tokenizing'/>
+
+#### 4.0. Offline Heterogeneous Graph Tokenizing  <a href='#all_catelogue'>[Back to Top]</a>
+
+Since the graph tokenizer does not update parameters during the two training processes, we use the Offline Heterogeneous Graph Tokenizing method to preprocess the instruction data in order to accelerate the speed of model training. The data downloaded in <a href='#Data Preparation'>Data Preparation </a> has been processed with a pre-trained graph tokenizer. If you need to process with your own graph tokenizer, you can refer to the following commands:
+
+* processing a single instruction file and its corresponding graph data ([run_graph_tokenizer_single.sh](scripts/tune_script/run_graph_tokenizer_single.sh)): 
+
+```shell
+cd /path/to/HiGPT
+
+ann_path=./hi_datasets/stage2_data/IMDB/instruct_ds_imdb/ann/IMDB_test_std_0_1000.json
+data_type=imdb
+graph_path=./hi_datasets/stage2_data/IMDB/instruct_ds_imdb/graph_data/test
+
+python run_offline_hgt_tokenizer_single.py --ann_path ${ann_path} \
+                                 --data_type ${data_type} \
+                                 --graph_path ${graph_path}
+```
+
+* processing instruction files within a directory and their corresponding graph data ([run_graph_tokenizer.sh](scripts/tune_script/run_graph_tokenizer.sh)): 
+
+```shell
+cd /path/to/HiGPT
+
+# offline tokenizing for stage1 matching instruction
+data_type=imdb
+graph_root=./hi_datasets/matching_instruction
+dsname_list=(instruct_ds_matching_movie instruct_ds_node_matching)
+pretrained_hgt=./MetaHGT_imdb_dblp_epoch5
+
+for dsname in "${dsname_list[@]}"
+do
+    python run_offline_hgt_tokenizer.py --dsname ${dsname} \
+                                 --data_type ${data_type} \
+                                 --pretrained_gnn_path ${pretrained_hgt} \
+                                 --graph_root ${graph_root}
+done
+
+data_type=dblp
+graph_root=./hi_datasets/matching_instruction
+dsname_list=(instruct_ds_matching_author instruct_ds_matching_paper instruct_ds_node_matching)
+pretrained_hgt=./MetaHGT_imdb_dblp_epoch5
+
+for dsname in "${dsname_list[@]}"
+do
+    python run_offline_hgt_tokenizer.py --dsname ${dsname} \
+                                 --data_type ${data_type} \
+                                 --pretrained_gnn_path ${pretrained_hgt} \
+                                 --graph_root ${graph_root}
+done
+```
 
 <span id='Prepare Pre-trained Checkpoint'/>
 
@@ -348,53 +452,50 @@ Please follow the instructions to prepare the checkpoints.
 
 - `Vicuna`:
   Prepare our base model Vicuna, which is an instruction-tuned chatbot and base model in our implementation. Please download its weights [here](https://github.com/lm-sys/FastChat#model-weights). We generally utilize v1.1 and v1.5 model with 7B parameters.
-
-- `Graph Encoder`:
-  is used to encode graph structures. We employ text-graph grounding approach to obtain the pre-trained graph transformer model, which you could download by [graph transformer](https://huggingface.co/Jiabin99/Arxiv-PubMed-GraphCLIP-GT) and put it at [[./HiGPT]](./HiGPT). We also provide source codes and example Cora data for text-graph grounding at [[./text-graph-grounding]](./text-graph-grounding) for your reference.
-
-- `Graph Data`:
-  is a combination of all utilized pyg graph data that contain node features, edge_index and so on. You can download by [all_graph_data.pt](https://huggingface.co/datasets/Jiabin99/All_pyg_graph_data) and put it at [[./HiGPT/graph_data]](./HiGPT/graph_data)
+- `Pretrained Graph Tokenizer`:
+  is used to encode heterogeneous graph structures. We employ text-graph grounding approach to obtain the pre-trained heterogeneous graph transformer model, which you could download by [heterogeneous graph transformer](https://huggingface.co/Jiabin99/In-Context-HGT) and put it at [[./HiGPT]](./HiGPT). We also provide source codes for text-graph grounding at [[./HG_grounding]](./HG_grounding) for your reference.
 
 <span id='Self-Supervised Instruction Tuning'/>
 
-#### 4.2. Self-Supervised Instruction Tuning  <a href='#all_catelogue'>[Back to Top]</a>
+#### 4.2. Instruction Tuning with Heterogeneous Graph Corpus  <a href='#all_catelogue'>[Back to Top]</a>
 
-* **Prepare data:** Please download our instruction tuning data [graph_matching.json](https://huggingface.co/datasets/Jiabin99/graph-matching) for the graph matching task.
-
-* **Start tuning:** After the aforementioned steps, you could start the first stage tuning by filling blanks at [graphgpt_stage1.sh](scripts/tune_script/graphgpt_stage1.sh). There is an example as below: 
+You could start the first stage tuning by filling blanks at [higpt_stage_1.sh](scripts/tune_script/higpt_stage_1.sh). There is an example as below: 
 
 ```shell
 # to fill in the following path to run the first stage of our HiGPT!
-model_path=../vicuna-7b-v1.5-16k
-instruct_ds=./data/stage_1/graph_matching.json
-graph_data_path=./graph_data/all_graph_data.pt
-pretra_gnn=./clip_gt_arxiv
-output_model=./checkpoints/stage_1
+#!/bin/bash
+cd /path/to/HiGPT
+
+data_path=instruct_ds_matching_author,instruct_ds_matching_movie,instruct_ds_matching_paper,instruct_ds_node_matching,instruct_ds_node_matching_imdb
+graph_root=./hi_datasets/matching_instruction
+output_dir=./checkpoints/higpt-metahgt-stage1-7b-dblp-imdb-epoch1
+base_model=/path/to/vicuna-7b-v1.5-16k
 
 wandb offline
-python -m torch.distributed.run --nnodes=1 --nproc_per_node=4 --master_port=20001 \
-    graphgpt/train/train_mem.py \
-    --model_name_or_path ${model_path} \
+
+python3.8 -m torch.distributed.run --nnodes=1 --nproc_per_node=4 --master_port=20001 \
+    higpt/train/train_hete_nopl.py \
+    --model_name_or_path ${base_model} \
     --version v1 \
-    --data_path ${instruct_ds} \
-    --graph_content ./arxiv_ti_ab.json \
-    --graph_data_path ${graph_data_path} \
-    --graph_tower ${pretra_gnn} \
+    --data_path ${data_path} \
+    --graph_content /root/paddlejob/workspace/env_run/llm/GraphChat/playground/data/arxiv_ti_ab.json \
+    --graph_root ${graph_root} \
+    --graph_tower ${graph_tower} \
     --tune_graph_mlp_adapter True \
     --graph_select_layer -2 \
-    --use_graph_start_end \
-    --bf16 True \
-    --output_dir ${output_model} \
-    --num_train_epochs 3 \
-    --per_device_train_batch_size 2 \
-    --per_device_eval_batch_size 2 \
+    --use_graph_start_end True \
+    --bf16 False \
+    --output_dir ${output_dir} \
+    --num_train_epochs 1 \
+    --per_device_train_batch_size 1 \
+    --per_device_eval_batch_size 1 \
     --gradient_accumulation_steps 1 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
     --save_steps 2400 \
     --save_total_limit 1 \
-    --learning_rate 2e-3 \
-    --weight_decay 0. \
+    --learning_rate 2e-5 \
+    --weight_decay 0.0001 \
     --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
@@ -402,7 +503,8 @@ python -m torch.distributed.run --nnodes=1 --nproc_per_node=4 --master_port=2000
     --model_max_length 2048 \
     --gradient_checkpointing True \
     --lazy_preprocess True \
-    --report_to wandb
+    --report_to wandb \
+    --hetero_key_path /root/paddlejob/workspace/env_run/output/sample_instruct_ds/ann/hetero_key_order.json
 ```
 
 <span id='Extract the Trained Projector'/>
@@ -413,65 +515,68 @@ We could extract the trained projector in the stage 1 by filling blanks at [extr
 
 ```shell
 # to fill in the following path to extract projector for the first tuning stage!
-src_model=./checkpoints/stage_1
-output_proj=./checkpoints/stage_1_projector/stage_1_projector.bin
+#!/bin/bash
+cd /path/to/HiGPT
+stage1_model=./checkpoints/higpt-metahgt-stage1-7b-dblp-imdb-epoch1
+graph_projector=./checkpoints/higpt_stage1_projector_metahgt_dblp_imdb_epoch1/higpt-metahgt-stage1-7b.bin
 
 python3.8 ./scripts/extract_graph_projector.py \
-  --model_name_or_path ${src_model} \
-  --output ${output_proj}
+  --model_name_or_path ${stage1_model} \
+  --output ${graph_projector}
 ```
 
 <span id='Task-Specific Instruction Tuning'/>
 
 #### 4.4. Task-Specific Instruction Tuning  <a href='#all_catelogue'>[Back to Top]</a>
 
-* **Prepare data:** The choices of our task-specific instruction data could be diverse, e.g., standard or COT (Chain-of-Thought) node classification, link prediction or mixing data for multitasking. Please refer to the  [task_specific](https://huggingface.co/datasets/Jiabin99/Arxiv-PubMed-mix-NC-LP).
-
-* **Start tuning:** After the aforementioned steps, you could start the second stage tuning by filling blanks at [graphgpt_stage2.sh](scripts/tune_script/graphgpt_stage2.sh). There is an example as below: 
+You could start the second stage tuning based on different number of shots (e.g., 1, 3, 5, 10, 20, 40, 60) by filling blanks at [higpt_stage_2.sh](scripts/tune_script/higpt_stage_2.sh). There is an example as below: 
 
 ```shell
 # to fill in the following path to run the second stage of our HiGPT!
-model_path=../vicuna-7b-v1.5-16k
-instruct_ds=./data/stage_2/data_all_mix.json
-graph_data_path=./graph_data/all_graph_data.pt
-pretra_gnn=./clip_gt_arxiv
-tuned_proj=./checkpoints/stage_1_projector/stage_1_projector.bin
-output_model=./checkpoints/stage_2
+#!/bin/bash
+cd /path/to/HiGPT
+base_model=/path/to/vicuna-7b-v1.5-16k
+graph_root=./hi_datasets/stage2_data/IMDB
+graph_projector=./checkpoints/higpt_stage1_projector_metahgt_dblp_imdb_epoch1/higpt-metahgt-stage1-7b.bin
 
-wandb offline
-python -m torch.distributed.run --nnodes=1 --nproc_per_node=4 --master_port=20001 \
-    graphgpt/train/train_mem.py \
-    --model_name_or_path ${model_path} \
+num_epochs=15
+num_shot_list=(1 3 5 10 20 40 60)
+for num_shot in "${num_shot_list[@]}"
+do
+    python3.8 -m torch.distributed.run --nnodes=1 --nproc_per_node=4 --master_port=20010 higpt/train/train_hete_nopl.py \
+    --model_name_or_path ${base_model} \
     --version v1 \
-    --data_path ${instruct_ds} \
-    --graph_content ./arxiv_ti_ab.json \
-    --graph_data_path ${graph_data_path} \
-    --graph_tower ${pretra_gnn} \
-    --pretrain_graph_mlp_adapter ${tuned_proj} \
+    --data_path instruct_ds_imdb \
+    --graph_content /root/paddlejob/workspace/env_run/llm/GraphChat/playground/data/arxiv_ti_ab.json \
+    --graph_root ${graph_root} \
+    --graph_tower MetaHGT_imdb_dblp_epoch5 \
+    --pretrain_graph_mlp_adapter ${graph_projector} \
     --tune_graph_mlp_adapter True \
     --graph_select_layer -2 \
-    --use_graph_start_end True\
-    --bf16 True \
-    --output_dir ${output_model} \
-    --num_train_epochs 2 \
+    --use_graph_start_end True \
+    --bf16 False \
+    --output_dir ./checkpoints/higpt-stage2-imdb-metahgt-epoch${num_epochs}-mixcot-true-${num_shot} \
+    --num_train_epochs ${num_epochs} \
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 1 \
     --gradient_accumulation_steps 1 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 50000 \
+    --save_steps 2400 \
     --save_total_limit 1 \
     --learning_rate 2e-5 \
-    --weight_decay 0. \
+    --weight_decay 0.0001 \
     --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
     --tf32 True \
     --model_max_length 2048 \
     --gradient_checkpointing True \
-    --dataloader_num_workers 4 \
     --lazy_preprocess True \
-    --report_to wandb
+    --report_to wandb \
+    --hetero_key_path /root/paddlejob/workspace/env_run/output/sample_instruct_ds/ann/hetero_key_order.json \
+    --num_shot ${num_shot} 
+done
 
 ```
 
@@ -481,31 +586,60 @@ python -m torch.distributed.run --nnodes=1 --nproc_per_node=4 --master_port=2000
 
 ## 5. Evaluating HiGPT  <a href='#all_catelogue'>[Back to Top]</a>
 
-<span id='Preparing Checkpoints and Data'/>
+<span id='Preparing Checkpoints'/>
 
 
-#### 5.1. Preparing Checkpoints and Data <a href='#all_catelogue'>[Back to Top]</a>
+#### 5.1. Preparing Checkpoints <a href='#all_catelogue'>[Back to Top]</a>
 
-* **Checkpoints:** You could try to evaluate HiGPT by using your own model or our released checkpoints.
-* **Data:** We split test sets for different graph datasets and make the instruction data for evaluation. Please refer to the  [evaluating](https://huggingface.co/datasets/Jiabin99/HiGPT-eval-instruction).
+**Checkpoints:** You could try to evaluate HiGPT by using your own model or our released checkpoints.
 
 <span id='Running Evaluation'/>
 
 #### 5.2. Running Evaluation <a href='#all_catelogue'>[Back to Top]</a>
 
-You could start the second stage tuning by filling blanks at [graphgpt_eval.sh](scripts/eval_script/graphgpt_eval.sh). There is an example as below: 
+* You could evaluate our HiGPT by filling blanks at [higpt_info_imdb_cot.sh](scripts/eval_script/higpt_info_imdb_cot.sh). There is an example as below: 
+
 ```shell
 # to fill in the following path to extract projector for the second tuning stage!
-output_model=./checkpoints/stage_2
-datapath=./data/eval/arxiv_nc.json
-graph_data_path=./graph_data/all_graph_data.pt
-res_path=./output_stage_2_arxiv_nc
-start_id=0
-end_id=20000
-num_gpus=2
-
-python3.8 ./graphgpt/eval/run_graphgpt.py --model-name ${output_model}  --prompting_file ${datapath} --graph_data_path ${graph_data_path} --output_res_path ${res_path} --start_id ${start_id} --end_id ${end_id} --num_gpus ${num_gpus}
+#!/bin/bash
+cd /path/to/HiGPT
+output_model=./checkpoints
+datapath=./hi_datasets/stage2_data/IMDB
+res_path=./output_res_imdb
+num_epochs=15
+num_shot_list=(1 3 5 10 20 40 60)
+for num_shot in "${num_shot_list[@]}"
+do
+  for ((cot_case=0; cot_case<=0; cot_case++))
+  do
+    python3.8 ./higpt/eval/run_higpt.py --model-name ${output_model}/higpt-stage2-imdb-metahgt-epoch${num_epochs}-mixcot-true-${num_shot}  --prompting_file ${datapath}/instruct_ds_imdb/ann_processed_MetaHGT_imdb_dblp_epoch5/cot_test/IMDB_test_std_0_1000_cot_${cot_case}.json --graph_root ${datapath} --output_res_path ${res_path}/imdb_test_res_epoch_${num_epochs}_std_${num_shot}_shot_cot_${cot_case} --start_id 0 --end_id 1000 --num_gpus 4
+  done
+done
 ```
+* You could evaluate our HiGPT using the **Graph In-Context Learning** (**Graph ICL**) by filling blanks at [hetegpt_info_imdb_cot_incontext.sh](scripts/eval_script/hetegpt_info_imdb_cot_incontext.sh). There is an example as below: 
+
+```shell
+#!/bin/bash
+cd /path/to/HiGPT
+output_model=./checkpoints
+datapath=./hi_datasets/stage2_data/IMDB
+res_path=./output_res_imdb
+num_epochs=15
+num_shot_list=(1 3 5 10 20 40 60)
+cot_case_list=(0)
+incontext_dir=in_context_1_shot
+for num_shot in "${num_shot_list[@]}"
+do
+  for cot_case in "${cot_case_list[@]}"
+  do
+    python3.8 ./higpt/eval/run_higpt_incontext.py --model-name ${output_model}/hetegpt-stage2-imdb-metahgt-epoch${num_epochs}-mixcot-true-${num_shot}  --prompting_file ${datapath}/instruct_ds_imdb/ann_processed_MetaHGT_imdb_dblp_epoch5/${incontext_dir}/IMDB_test_std_0_1000_cot_${cot_case}_in_context.json --graph_root ${datapath} --output_res_path ${res_path}_${incontext_dir}/imdb_test_res_epoch_${num_epochs}_std_${num_shot}_shot_cot_${cot_case} --start_id 0 --end_id 1000 --num_gpus 4
+  done
+done
+
+```
+
+
+
 ---------
 
 
@@ -519,7 +653,7 @@ For any questions or feedback, feel free to contact [Jiabin Tang](mailto:jiabint
 If you find HiGPT useful in your research or applications, please kindly cite:
 ```tex
 @articles{tang2023graphgpt,
-title={HiGPT: Graph Instruction Tuning for Large Language Models}, 
+title={HiGPT: Heterogeneous Graph Language Model}, 
 author={Jiabin Tang and Yuhao Yang and Wei Wei and Lei Shi and Long Xia and Dawei Yin and Chao Huang},
 year={2024},
 eprint={},
