@@ -9,7 +9,7 @@
 
 <a href='https://HiGPT-HKU.github.io/'><img src='https://img.shields.io/badge/Project-Page-Green'></a>
 <a href='#'><img src='https://img.shields.io/badge/Demo-Page-purple'></a> 
-<a href='#'><img src='https://img.shields.io/badge/Paper-PDF-orange'></a> 
+<a href='https://arxiv.org/abs/2402.16024'><img src='https://img.shields.io/badge/Paper-PDF-orange'></a> 
 [![YouTube](https://badges.aleen42.com/src/youtube.svg)](#)
  • 🌐 <a href="https://mp.weixin.qq.com/s/rvKTFdCk719Q6hT09Caglw" target="_blank">中文博客</a>
 
@@ -433,7 +433,7 @@ If you find HiGPT useful in your research or applications, please kindly cite:
 title={HiGPT: Heterogeneous Graph Language Model}, 
 author={Jiabin Tang and Yuhao Yang and Wei Wei and Lei Shi and Long Xia and Dawei Yin and Chao Huang},
 year={2024},
-eprint={},
+eprint={2402.16024},
 archivePrefix={arXiv},
 primaryClass={cs.CL}
 }
