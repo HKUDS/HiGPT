@@ -115,8 +115,9 @@ pip install -r requirements.txt
 
 
 ### 2. Data Preparation  <a href='#all_catelogue'>[Back to Top]</a>
+🎯 *(Temporarily recommended from 2024.03.25)* Due to the large size of instruction data in the stage 1, we have not upload the complete stage 1 instruction data to the archive. We have an alternative way to download the complete version of stage 1 instruction data: https://pan.baidu.com/s/1rtdxzhRRcEUEpXoWKml36A?pwd=id6u. And we will upload the complete version to the archive as soon as possible. **But other data used by HiGPT could be accessed by archive.**
 
-The tuning data of our HiGPT consists of two parts, i.e., heterogeneous graph corpus (stage 1) and heterogeneity-aware graph instruction (stage 2). You can `cd hi_datasets` and run `sh get_stage1_data.sh` to download the data in **stage 1**:
+*(Temporarily deprecated from 2024.03.25)* The tuning data of our HiGPT consists of two parts, i.e., heterogeneous graph corpus (stage 1) and heterogeneity-aware graph instruction (stage 2). You can `cd hi_datasets` and run `sh get_stage1_data.sh` to download the data in **stage 1**:
 
 ```shell
 cd /path/to/HiGPT/hi_datasets
@@ -128,7 +129,7 @@ tar -xzvf matching_instruction.tar.gz
 rm -f matching_instruction.tar.gz
 ```
 
-Also, you can run `sh get_stage1_data.sh` to download the data in **stage 2**:
+*(Always recommended)* Also, you can run `sh get_stage1_data.sh` to download the data in **stage 2**:
 
 ```shell
 cd /path/to/HiGPT/hi_datasets
