@@ -20,6 +20,7 @@ This repository hosts the code, data and model weight of **HiGPT**.
 
 ## 🎉 News 
 
+- [x] 🚀 [2024.05] 🎯🎯📢📢 Our 🌟HiGPT🌟 has been accepted by KDD'24 Research Track (20% acceptance rate)! Congrats to all HiGPT team! 🎉🎉🎉
 
 🎯🎯📢📢 We have made significant updates to the **models** used in our HiGPT on 🤗 **Huggingface**. We highly recommend referring to the table below for further details: 
 
