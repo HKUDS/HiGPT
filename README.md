@@ -1,5 +1,7 @@
 # <center>HiGPT: Heterogeneous Graph Language Model</center>
 
+<img src='images/HiGPT_article_cover.png' />
+
 [Jiabin Tang](https://tjb-tech.github.io/), [Yuhao Yang](http://yuh-yang.github.io), [Wei Wei](#), [Lei Shi](#), [Long Xia](#), [Dawei Yin](https://www.yindawei.com/) and [Chao Huang](https://sites.google.com/view/chaoh/home)*.
 (*Correspondence )
 
